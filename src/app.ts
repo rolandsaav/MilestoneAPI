@@ -1,6 +1,6 @@
 import express from "express";
 import userRouter from "./routes/users.js";
-import { Database } from "../types/database.js";
+import { Database } from "./types/database.js";
 
 export default function makeApp(database: Database) {
   const app = express();

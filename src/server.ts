@@ -1,5 +1,5 @@
-import { Database } from "../types/database.js";
 import makeApp from "./app.js";
+import { Database } from "./types/database.js";
 
 const getUser = () => {
   return "Roland";

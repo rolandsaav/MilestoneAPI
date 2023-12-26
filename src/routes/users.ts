@@ -1,5 +1,5 @@
 import express from "express";
-import { Database } from "../../types/database.js";
+import { Database } from "../types/database.js";
 
 export default function (database: Database) {
   const router = express.Router();
