@@ -1,11 +1,14 @@
-import express from "express";
+import { Database } from "../types/database.js";
+import makeApp from "./app.js";
 
-const app = express();
+const getUser = () => {
+  return "Roland";
+};
 
-app.get("/", (req, res) => {
-  res.send("Welcome to the jungle!");
-});
+const getUsers = () => {
+  return ["Roland", "Mahalia", "Calypso"];
+};
 
-app.listen(3000, () => {
-  console.log(`Listening on port 3000!`);
-});
+const db: Database = { getUser, getUsers };
+
+makeApp(db);
