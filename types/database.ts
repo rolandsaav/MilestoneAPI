@@ -1,4 +1,4 @@
-export default interface database {
+export default interface Database {
   getUsers: getUsers;
   getUser: getUser;
 }

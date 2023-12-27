@@ -1,6 +1,16 @@
 import express from "express";
-export function makeApp(): express.Express {
+import Database from "../types/database.js";
+import UserRouter from "./routes/users.js";
+import BodyParser from "body-parser";
+
+export function makeApp(databse: Database): express.Express {
   const app = express();
+
+  const userRouter = UserRouter(databse);
+
+  app.use(BodyParser.urlencoded({ extended: false }));
+
+  app.use("/users", userRouter);
 
   app.get("/", (req, res) => {
     res.send("Welcome to the jungle");
