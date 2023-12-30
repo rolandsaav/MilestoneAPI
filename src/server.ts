@@ -1,14 +1,22 @@
-import makeApp from "./app.js";
-import { Database } from "./types/database.js";
+import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+import UserRouter from "./routes/users.js";
+import GoalRouter from "./routes/goals.js";
+import bodyParser from "body-parser";
 
-const getUser = () => {
-  return "Roland";
-};
+const app = express();
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.json());
 
-const getUsers = () => {
-  return ["Roland", "Mahalia", "Calypso"];
-};
+app.use("/users", UserRouter);
+app.use("/goals", GoalRouter);
 
-const db: Database = { getUser, getUsers };
+const port = process.env.PORT ? parseInt(process.env.PORT) : 8080;
+app.get("/", (req, res) => {
+  res.send("Welcome to the jungle!");
+});
 
-makeApp(db);
+app.listen(port, () => {
+  console.log(`App listening on port: ${port}`);
+});

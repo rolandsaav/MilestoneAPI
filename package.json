@@ -5,28 +5,23 @@
 	"description": "The API for the Milestone network",
 	"main": "",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"build": "tsc",
-		"watch": "tsc -w",
-		"nodemon": "nodemon dist/server.js",
-		"dev": "concurrently \"npm run watch\" \"npm run nodemon\"",
-		"prod": "node dist/server.js"
+		"dev": "tsc -w & nodemon dist/src/server.js"
 	},
 	"author": "Roland Saavedra",
 	"license": "ISC",
 	"devDependencies": {
-		"@babel/preset-typescript": "^7.23.3",
 		"@types/express": "^4.17.21",
-		"@types/jest": "^29.5.11",
 		"@types/node": "^20.10.5",
 		"concurrently": "^8.2.2",
-		"jest": "^29.7.0",
 		"nodemon": "^3.0.2",
-		"supertest": "^6.3.3",
-		"ts-jest": "^29.1.1",
 		"typescript": "^5.3.3"
 	},
 	"dependencies": {
-		"express": "^4.18.2"
+		"@types/uuid": "^9.0.7",
+		"body-parser": "^1.20.2",
+		"dotenv": "^16.3.1",
+		"express": "^4.18.2",
+		"firebase-admin": "^12.0.0",
+		"uuid": "^9.0.1"
 	}
 }

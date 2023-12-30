@@ -1,11 +1,12 @@
 {
 	"compilerOptions": {
+		"outDir": "dist",
 		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
 		"target": "ES2020",
 		"sourceMap": true,
-		"outDir": "dist",
-		"rootDir": "src"
+		"moduleResolution": "NodeNext",
+		"skipLibCheck": true,
+		"resolveJsonModule": true
 	},
 	"include": [
 		"src/**/*"
