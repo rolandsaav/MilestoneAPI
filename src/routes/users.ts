@@ -2,9 +2,12 @@ import express from "express";
 import { db } from "../firebase.js";
 import { Filter, FieldValue } from "@google-cloud/firestore";
 import { v4 as uuidV4 } from "uuid";
+import { User } from "../types/User.js";
+import { Goal } from "../types/Goal.js";
 
 const router = express.Router();
 const userCollection = db.collection("users");
+const goalCollection = db.collection("goals");
 
 router.get("/", async (req, res) => {
   try {
@@ -20,11 +23,12 @@ router.get("/", async (req, res) => {
 router.post("/create", async (req, res) => {
   try {
     const newId = uuidV4();
-    const newUser = {
+    const newUser: User = {
       id: newId,
       username: req.body.username,
       email: req.body.email,
       friends: [],
+      goals: [],
     };
 
     const containsUserRes = await userCollection
@@ -118,7 +122,6 @@ router.delete("/delete/:id", async (req, res) => {
 
   if (friends !== undefined) {
     friends.forEach((friendId) => {
-      console.log(`Removing ${id} from friends of ${friendId}`);
       promises.push(
         userCollection
           .doc(friendId)
@@ -133,6 +136,84 @@ router.delete("/delete/:id", async (req, res) => {
 
   const results = await Promise.all(promises);
   res.send(`${userSnapshot.data().username} was deleted`);
+});
+
+router.post("/:id/create", async (req, res) => {
+  const userId = req.params.id;
+  const body = req.body;
+  const goalId = uuidV4();
+  const userDoc = userCollection.doc(userId);
+
+  const userSnapshot = await userDoc.get();
+  if (!userSnapshot.exists) {
+    res.status(400);
+    res.send("Cannot create a goal for a user that does not exist");
+    return;
+  }
+
+  const updateUserPromise = userDoc.update({
+    goals: FieldValue.arrayUnion(goalId),
+  });
+
+  const newGoal = {
+    id: goalId,
+    name: body.name,
+    description: body.description,
+    members: [userId],
+  };
+
+  const createGoalPromise = goalCollection.doc(goalId).set(newGoal);
+
+  const results = await Promise.all([updateUserPromise, createGoalPromise]);
+
+  res.json(newGoal);
+});
+
+router.post("/:userId/join/:goalId", async (req, res) => {
+  const userId = req.params.userId;
+  const goalId = req.params.goalId;
+
+  const userDoc = userCollection.doc(userId);
+  const goalDoc = goalCollection.doc(goalId);
+
+  let promises = [];
+  promises.push(userDoc.get());
+  promises.push(goalDoc.get());
+
+  const results: FirebaseFirestore.DocumentSnapshot[] =
+    await Promise.all(promises);
+
+  if (!results[0].exists || !results[1].exists) {
+    res.status(400);
+    res.send("Either the user or the goal did not exist");
+    return;
+  }
+  const userData = results[0].data() as User;
+  const goalData = results[1].data() as Goal;
+
+  if (userData.goals.includes(goalData.id)) {
+    res.status(400);
+    res.send("This user is already a member of this goal");
+    return;
+  }
+
+  const updateUserPromise = userDoc.update({
+    goals: FieldValue.arrayUnion(goalId),
+  });
+  const updateGoalPromise = goalDoc.update({
+    members: FieldValue.arrayUnion(userId),
+  });
+
+  const updateResults = await Promise.all([
+    updateUserPromise,
+    updateGoalPromise,
+  ]);
+
+  res.send(
+    `${userData.username} has joined ${
+      goalData.name
+    }. Data was written at: ${updateResults[0].writeTime.toMillis()} and ${updateResults[1].writeTime.toMillis()}`,
+  );
 });
 
 export default router;
