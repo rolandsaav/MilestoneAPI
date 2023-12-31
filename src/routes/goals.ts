@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
   try {
     const goalsSnapshot = await goalCollection.get();
 
-    let goals = [];
+    let goals: Array<FirebaseFirestore.DocumentData> = [];
     goalsSnapshot.forEach((goal) => {
       goals.push(goal.data());
     });
