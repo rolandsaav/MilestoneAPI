@@ -10,210 +10,242 @@ const userCollection = db.collection("users");
 const goalCollection = db.collection("goals");
 
 router.get("/", async (req, res) => {
-  try {
-    const usersSnapshot = await userCollection.get();
-    let users = [];
-    usersSnapshot.forEach((doc) => {
-      users.push(doc.data());
-    });
-    res.json(users);
-  } catch {}
+    try {
+        const usersSnapshot = await userCollection.get();
+        const users = [];
+        usersSnapshot.forEach((doc) => {
+            users.push(doc.data());
+        });
+        res.json(users);
+    } catch {
+        /* empty */
+    }
 });
 
-router.post("/create", async (req, res) => {
-  try {
-    const newId = uuidV4();
-    const newUser: User = {
-      id: newId,
-      username: req.body.username,
-      email: req.body.email,
-      friends: [],
-      goals: [],
-    };
+router.get("/:id", async (req, res) => {
+    try {
+        const userSnapshot = await userCollection.doc(req.params.id).get();
 
-    const containsUserRes = await userCollection
-      .where(
-        Filter.or(
-          Filter.where("username", "==", newUser.username),
-          Filter.where("email", "==", newUser.email),
-        ),
-      )
-      .get();
+        if (!userSnapshot.exists) {
+            res.status(400);
+            res.send("No user with that id exists");
+            return;
+        }
 
-    if (!containsUserRes.empty) {
-      res.status(400);
-      res.send("The user already exists");
-      return;
+        res.json(userSnapshot.data());
+    } catch {
+        /* empty */
     }
+});
 
-    const result = await userCollection.doc(newId).set(newUser);
-    res.json(newUser);
-  } catch {}
+type createUserBody = {
+    username: string;
+    email: string;
+};
+router.post("/create", async (req, res) => {
+    try {
+        const newId = uuidV4();
+
+        const body: createUserBody = req.body;
+
+        if (
+            body.email.trim().length === 0 &&
+            body.username.trim().length === 0
+        ) {
+            res.status(400);
+            res.send("Body wasn't right");
+            return;
+        }
+        const newUser: User = {
+            id: newId,
+            username: req.body.username,
+            email: req.body.email,
+            friends: [],
+            goals: [],
+        };
+
+        const containsUserRes = await userCollection
+            .where(
+                Filter.or(
+                    Filter.where("username", "==", newUser.username),
+                    Filter.where("email", "==", newUser.email),
+                ),
+            )
+            .get();
+
+        if (!containsUserRes.empty) {
+            res.status(400);
+            res.send("The user already exists");
+            return;
+        }
+
+        await userCollection.doc(newId).set(newUser);
+        res.json(newUser);
+    } catch {
+        /* empty */
+    }
 });
 
 router.post("/:id/add", async (req, res) => {
-  const id = req.params.id;
-  const otherId = req.body.friendId;
+    const id = req.params.id;
+    const otherId = req.body.friendId;
 
-  if (otherId === undefined) {
-    res.status(400);
-    res.send("No other user id was provided");
-    return;
-  }
+    if (otherId === undefined) {
+        res.status(400);
+        res.send("No other user id was provided");
+        return;
+    }
 
-  const userPromise = userCollection.doc(id).get();
-  const otherUserPromise = userCollection.doc(otherId).get();
+    const userPromise = userCollection.doc(id).get();
+    const otherUserPromise = userCollection.doc(otherId).get();
 
-  const userResults = await Promise.all([userPromise, otherUserPromise]);
+    const userResults = await Promise.all([userPromise, otherUserPromise]);
 
-  const userSnapshot = userResults[0];
-  const otherUserSnapshot = userResults[1];
+    const userSnapshot = userResults[0];
+    const otherUserSnapshot = userResults[1];
 
-  if (!userSnapshot.exists || !otherUserSnapshot.exists) {
-    res.status(400);
-    res.send("At least one of those users was not found in the database");
-    return;
-  }
+    if (!userSnapshot.exists || !otherUserSnapshot.exists) {
+        res.status(400);
+        res.send("At least one of those users was not found in the database");
+        return;
+    }
 
-  const userData = userSnapshot.data();
-  const otherUserData = otherUserSnapshot.data();
+    const userData = userSnapshot.data();
+    // const otherUserData = otherUserSnapshot.data();
 
-  if (
-    userData.friends !== undefined &&
-    (userData.friends as string[]).includes(otherId)
-  ) {
-    res.status(400);
-    res.send("The users are already friends");
-    return;
-  }
+    if (
+        userData.friends !== undefined &&
+        (userData.friends as string[]).includes(otherId)
+    ) {
+        res.status(400);
+        res.send("The users are already friends");
+        return;
+    }
 
-  const updateUserPromise = userCollection
-    .doc(id)
-    .update({ friends: FieldValue.arrayUnion(otherId) });
+    const updateUserPromise = userCollection
+        .doc(id)
+        .update({ friends: FieldValue.arrayUnion(otherId) });
 
-  const updateOtherUserPromise = userCollection
-    .doc(otherId)
-    .update({ friends: FieldValue.arrayUnion(id) });
+    const updateOtherUserPromise = userCollection
+        .doc(otherId)
+        .update({ friends: FieldValue.arrayUnion(id) });
 
-  const updateResults = await Promise.all([
-    updateUserPromise,
-    updateOtherUserPromise,
-  ]);
+    await Promise.all([updateUserPromise, updateOtherUserPromise]);
 
-  res.send(
-    `User with id ${userSnapshot.data().username} and user with id ${
-      otherUserSnapshot.data().username
-    } are now friends!`,
-  );
+    res.send(
+        `User with id ${userSnapshot.data().username} and user with id ${
+            otherUserSnapshot.data().username
+        } are now friends!`,
+    );
 });
 
 router.delete("/delete/:id", async (req, res) => {
-  const id = req.params.id;
-  const userSnapshot = await userCollection.doc(id).get();
+    const id = req.params.id;
+    const userSnapshot = await userCollection.doc(id).get();
 
-  if (!userSnapshot.exists) {
-    res.status(400);
-    res.send("Cannot delete user that does not exist");
-    return;
-  }
+    if (!userSnapshot.exists) {
+        res.status(400);
+        res.send("Cannot delete user that does not exist");
+        return;
+    }
 
-  const friends = userSnapshot.data().friends as string[];
-  let promises = [] as Promise<FirebaseFirestore.WriteResult>[];
+    const friends = userSnapshot.data().friends as string[];
+    const promises = [] as Promise<FirebaseFirestore.WriteResult>[];
 
-  if (friends !== undefined) {
-    friends.forEach((friendId) => {
-      promises.push(
-        userCollection
-          .doc(friendId)
-          .update({ friends: FieldValue.arrayRemove(id) }),
-      );
-    });
-  }
+    if (friends !== undefined) {
+        friends.forEach((friendId) => {
+            promises.push(
+                userCollection
+                    .doc(friendId)
+                    .update({ friends: FieldValue.arrayRemove(id) }),
+            );
+        });
+    }
 
-  const deleteRes = userCollection.doc(id).delete();
+    const deleteRes = userCollection.doc(id).delete();
 
-  promises.push(deleteRes);
+    promises.push(deleteRes);
 
-  const results = await Promise.all(promises);
-  res.send(`${userSnapshot.data().username} was deleted`);
+    await Promise.all(promises);
+    res.send(`${userSnapshot.data().username} was deleted`);
 });
 
 router.post("/:id/create", async (req, res) => {
-  const userId = req.params.id;
-  const body = req.body;
-  const goalId = uuidV4();
-  const userDoc = userCollection.doc(userId);
+    const userId = req.params.id;
+    const body = req.body;
+    const goalId = uuidV4();
+    const userDoc = userCollection.doc(userId);
 
-  const userSnapshot = await userDoc.get();
-  if (!userSnapshot.exists) {
-    res.status(400);
-    res.send("Cannot create a goal for a user that does not exist");
-    return;
-  }
+    const userSnapshot = await userDoc.get();
+    if (!userSnapshot.exists) {
+        res.status(400);
+        res.send("Cannot create a goal for a user that does not exist");
+        return;
+    }
 
-  const updateUserPromise = userDoc.update({
-    goals: FieldValue.arrayUnion(goalId),
-  });
+    const updateUserPromise = userDoc.update({
+        goals: FieldValue.arrayUnion(goalId),
+    });
 
-  const newGoal = {
-    id: goalId,
-    name: body.name,
-    description: body.description,
-    members: [userId],
-  };
+    const newGoal = {
+        id: goalId,
+        name: body.name,
+        description: body.description,
+        members: [userId],
+    };
 
-  const createGoalPromise = goalCollection.doc(goalId).set(newGoal);
+    const createGoalPromise = goalCollection.doc(goalId).set(newGoal);
 
-  const results = await Promise.all([updateUserPromise, createGoalPromise]);
+    await Promise.all([updateUserPromise, createGoalPromise]);
 
-  res.json(newGoal);
+    res.json(newGoal);
 });
 
 router.post("/:userId/join/:goalId", async (req, res) => {
-  const userId = req.params.userId;
-  const goalId = req.params.goalId;
+    const userId = req.params.userId;
+    const goalId = req.params.goalId;
 
-  const userDoc = userCollection.doc(userId);
-  const goalDoc = goalCollection.doc(goalId);
+    const userDoc = userCollection.doc(userId);
+    const goalDoc = goalCollection.doc(goalId);
 
-  let promises = [];
-  promises.push(userDoc.get());
-  promises.push(goalDoc.get());
+    const promises = [];
+    promises.push(userDoc.get());
+    promises.push(goalDoc.get());
 
-  const results: FirebaseFirestore.DocumentSnapshot[] =
-    await Promise.all(promises);
+    const results: FirebaseFirestore.DocumentSnapshot[] =
+        await Promise.all(promises);
 
-  if (!results[0].exists || !results[1].exists) {
-    res.status(400);
-    res.send("Either the user or the goal did not exist");
-    return;
-  }
-  const userData = results[0].data() as User;
-  const goalData = results[1].data() as Goal;
+    if (!results[0].exists || !results[1].exists) {
+        res.status(400);
+        res.send("Either the user or the goal did not exist");
+        return;
+    }
+    const userData = results[0].data() as User;
+    const goalData = results[1].data() as Goal;
 
-  if (userData.goals.includes(goalData.id)) {
-    res.status(400);
-    res.send("This user is already a member of this goal");
-    return;
-  }
+    if (userData.goals.includes(goalData.id)) {
+        res.status(400);
+        res.send("This user is already a member of this goal");
+        return;
+    }
 
-  const updateUserPromise = userDoc.update({
-    goals: FieldValue.arrayUnion(goalId),
-  });
-  const updateGoalPromise = goalDoc.update({
-    members: FieldValue.arrayUnion(userId),
-  });
+    const updateUserPromise = userDoc.update({
+        goals: FieldValue.arrayUnion(goalId),
+    });
+    const updateGoalPromise = goalDoc.update({
+        members: FieldValue.arrayUnion(userId),
+    });
 
-  const updateResults = await Promise.all([
-    updateUserPromise,
-    updateGoalPromise,
-  ]);
+    const updateResults = await Promise.all([
+        updateUserPromise,
+        updateGoalPromise,
+    ]);
 
-  res.send(
-    `${userData.username} has joined ${
-      goalData.name
-    }. Data was written at: ${updateResults[0].writeTime.toMillis()} and ${updateResults[1].writeTime.toMillis()}`,
-  );
+    res.send(
+        `${userData.username} has joined ${
+            goalData.name
+        }. Data was written at: ${updateResults[0].writeTime.toMillis()} and ${updateResults[1].writeTime.toMillis()}`,
+    );
 });
 
 export default router;
