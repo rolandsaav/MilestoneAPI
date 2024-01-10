@@ -29,6 +29,8 @@ router.post("/create", async (req, res) => {
       email: req.body.email,
       friends: [],
       goals: [],
+      friendRequests: [],
+      pendingRequests: [],
     };
 
     const containsUserRes = await userCollection
@@ -49,6 +51,71 @@ router.post("/create", async (req, res) => {
     const result = await userCollection.doc(newId).set(newUser);
     res.json(newUser);
   } catch {}
+});
+
+router.post("/:id/request", async (req, res) => {
+  const id = req.params.id;
+  const otherId = req.body.friendId;
+
+  if (otherId === undefined) {
+    res.status(400);
+    res.send("No other user id was provided");
+    return;
+  }
+
+  const userPromise = userCollection.doc(id).get();
+  const otherUserPromise = userCollection.doc(otherId).get();
+
+  const userResults = await Promise.all([userPromise, otherUserPromise]);
+
+  const userSnapshot = userResults[0];
+  const otherUserSnapshot = userResults[1];
+
+  if (!userSnapshot.exists || !otherUserSnapshot.exists) {
+    res.status(400);
+    res.send("At least one of those users was not found in the database");
+    return;
+  }
+
+  const userData = userSnapshot.data();
+  const otherUserData = otherUserSnapshot.data();
+
+  if (
+    userData.friends !== undefined &&
+    (userData.friends as string[]).includes(otherId)
+  ) {
+    res.status(400);
+    res.send("The users are already friends");
+    return;
+  }
+
+  if (
+    userData !== undefined &&
+    (userData.pendingRequests as string[]).includes(otherId)
+  ) {
+    res.status(400);
+    res.send("A friend request has already been sent.");
+    return;
+  }
+
+  const updateUserPromise = userCollection
+    .doc(id)
+    .update({ pendingRequests: FieldValue.arrayUnion(otherId) });
+
+  const updateOtherUserPromise = userCollection
+    .doc(otherId)
+    .update({ friendRequests: FieldValue.arrayUnion(id) });
+
+  const updateResults = await Promise.all([
+    updateUserPromise,
+    updateOtherUserPromise,
+  ]);
+
+  res.send(
+    `User with id ${userSnapshot.data().username} has sent a friend requests to user with id ${
+      otherUserSnapshot.data().username
+    }!`,
+  );
 });
 
 router.post("/:id/add", async (req, res) => {
