@@ -6,6 +6,6 @@ export type User = {
   goals: string[];
   username: string[];
   email: string;
-  friendRequests: string[];
-  pendingRequests: string[];
+  incomingRequests: string[];
+  outgoingRequests: string[];
 };
