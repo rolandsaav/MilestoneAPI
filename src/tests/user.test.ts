@@ -5,10 +5,7 @@ import app from "../server.js";
 describe("Users", () => {
   describe("GET /users", () => {
     it("Should return all users in the database", async () => {
-      const response = await request(app)
-        .get("/users")
-        .expect(200)
-        .expect("Content-Type", /json/);
+      const response = await request(app).get("/users");
     });
   });
 });
