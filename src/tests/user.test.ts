@@ -1,11 +1,17 @@
-import { describe } from "mocha";
 import request from "supertest";
-import app from "../server.js";
+import { User } from "../types/User.js";
+import makeApp from "../app.js";
+import { Express } from "express";
 
-describe("Users", () => {
-  describe("GET /users", () => {
-    it("Should return all users in the database", async () => {
-      const response = await request(app).get("/users");
-    });
-  });
+let server: Express = null;
+
+beforeAll((done) => {
+  server = makeApp();
+  done();
+});
+test("/users should return an array of all users", async () => {
+  const response = await request(server).get("/users");
+  const users: User[] = response.body;
+  expect(users.length).toBeGreaterThan(1);
+  console.log(users);
 });
