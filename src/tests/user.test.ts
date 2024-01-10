@@ -1,8 +1,6 @@
 import request from "supertest";
-import { User } from "../types/User.js";
 import makeApp from "../app.js";
 import { Express } from "express";
-import { faker } from "@faker-js/faker";
 
 let server: Express = null;
 

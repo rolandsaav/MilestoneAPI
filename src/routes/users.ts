@@ -12,12 +12,14 @@ const goalCollection = db.collection("goals");
 router.get("/", async (req, res) => {
     try {
         const usersSnapshot = await userCollection.get();
-        let users = [];
+        const users = [];
         usersSnapshot.forEach((doc) => {
             users.push(doc.data());
         });
         res.json(users);
-    } catch {}
+    } catch {
+        /* empty */
+    }
 });
 
 router.get("/:id", async (req, res) => {
@@ -31,7 +33,9 @@ router.get("/:id", async (req, res) => {
         }
 
         res.json(userSnapshot.data());
-    } catch {}
+    } catch {
+        /* empty */
+    }
 });
 
 type createUserBody = {
@@ -75,9 +79,11 @@ router.post("/create", async (req, res) => {
             return;
         }
 
-        const result = await userCollection.doc(newId).set(newUser);
+        await userCollection.doc(newId).set(newUser);
         res.json(newUser);
-    } catch {}
+    } catch {
+        /* empty */
+    }
 });
 
 router.post("/:id/add", async (req, res) => {
@@ -105,7 +111,7 @@ router.post("/:id/add", async (req, res) => {
     }
 
     const userData = userSnapshot.data();
-    const otherUserData = otherUserSnapshot.data();
+    // const otherUserData = otherUserSnapshot.data();
 
     if (
         userData.friends !== undefined &&
@@ -124,10 +130,7 @@ router.post("/:id/add", async (req, res) => {
         .doc(otherId)
         .update({ friends: FieldValue.arrayUnion(id) });
 
-    const updateResults = await Promise.all([
-        updateUserPromise,
-        updateOtherUserPromise,
-    ]);
+    await Promise.all([updateUserPromise, updateOtherUserPromise]);
 
     res.send(
         `User with id ${userSnapshot.data().username} and user with id ${
@@ -147,7 +150,7 @@ router.delete("/delete/:id", async (req, res) => {
     }
 
     const friends = userSnapshot.data().friends as string[];
-    let promises = [] as Promise<FirebaseFirestore.WriteResult>[];
+    const promises = [] as Promise<FirebaseFirestore.WriteResult>[];
 
     if (friends !== undefined) {
         friends.forEach((friendId) => {
@@ -163,7 +166,7 @@ router.delete("/delete/:id", async (req, res) => {
 
     promises.push(deleteRes);
 
-    const results = await Promise.all(promises);
+    await Promise.all(promises);
     res.send(`${userSnapshot.data().username} was deleted`);
 });
 
@@ -193,7 +196,7 @@ router.post("/:id/create", async (req, res) => {
 
     const createGoalPromise = goalCollection.doc(goalId).set(newGoal);
 
-    const results = await Promise.all([updateUserPromise, createGoalPromise]);
+    await Promise.all([updateUserPromise, createGoalPromise]);
 
     res.json(newGoal);
 });
@@ -205,7 +208,7 @@ router.post("/:userId/join/:goalId", async (req, res) => {
     const userDoc = userCollection.doc(userId);
     const goalDoc = goalCollection.doc(goalId);
 
-    let promises = [];
+    const promises = [];
     promises.push(userDoc.get());
     promises.push(goalDoc.get());
 
