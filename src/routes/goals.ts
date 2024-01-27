@@ -22,6 +22,9 @@ router.get("/", async (req, res) => {
   } catch {}
 });
 
+router.post("/create", async (req, res) => {
+})
+
 router.post("/:goalId/post/:userId", async (req, res) => {
   const goalId = req.params.goalId;
   const userId = req.params.userId;
@@ -63,7 +66,7 @@ router.post("/:goalId/post/:userId", async (req, res) => {
 
   const result = await goalDoc.collection("posts").doc(postId).set(newPost);
 
-  res.send(`New post crated at ${result.writeTime.toDate().toDateString()}`);
+  res.send(`New post created at ${result.writeTime.toDate().toDateString()}`);
 });
 
 export default router;
