@@ -1,9 +1,9 @@
 import express from "express";
-import { db } from "../firebase.js";
-import { Filter, FieldValue } from "@google-cloud/firestore";
+import { bucket, db } from "../firebase.js";
 import { v4 as uuidV4 } from "uuid";
 import { User } from "../types/User.js";
 import { Goal } from "../types/Goal.js";
+import { UploadedFile } from "express-fileupload";
 
 const router = express.Router();
 const userCollection = db.collection("users");
@@ -24,6 +24,7 @@ router.get("/", async (req, res) => {
     }
 });
 
+// Create post route
 router.post("/:goalId/post/:userId", async (req, res) => {
     const goalId = req.params.goalId;
     const userId = req.params.userId;
@@ -50,6 +51,15 @@ router.post("/:goalId/post/:userId", async (req, res) => {
         return;
     }
 
+    const evidenceFile: UploadedFile = req.files.evidence as UploadedFile;
+    const evidenceId = uuidV4();
+
+    const uploadFileResponse = await bucket
+        .file(`evidence/${evidenceId}.jpg`)
+        .save(evidenceFile.data)
+        .catch(() => {
+            console.log("Could not upload file");
+        });
     const userData = userSnapshot.data() as User;
     const goalData = goalSnapshot.data() as Goal;
 
@@ -59,13 +69,13 @@ router.post("/:goalId/post/:userId", async (req, res) => {
         id: postId,
         creatorId: userData.id,
         goalId: goalData.id,
-        url: "",
+        storageId: evidenceId,
         date: new Date().toISOString(),
     };
 
     const result = await goalDoc.collection("posts").doc(postId).set(newPost);
 
-    res.send(`New post crated at ${result.writeTime.toDate().toDateString()}`);
+    res.send(`New post created at ${result.writeTime.toDate().toDateString()}`);
 });
 
 export default router;
