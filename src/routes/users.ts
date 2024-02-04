@@ -4,10 +4,12 @@ import { Filter, FieldValue } from "@google-cloud/firestore";
 import { v4 as uuidV4 } from "uuid";
 import { User } from "../types/User.js";
 import { Goal } from "../types/Goal.js";
+import { Post } from "../types/Post.js";
 
 const router = express.Router();
 const userCollection = db.collection("users");
 const goalCollection = db.collection("goals");
+const postCollection = db.collection("posts");
 
 router.get("/", async (req, res) => {
     try {
@@ -61,6 +63,7 @@ router.post("/create", async (req, res) => {
             email: req.body.email,
             friends: [],
             goals: [],
+            posts: [],
             incomingRequests: [],
             outgoingRequests: [],
         };
@@ -86,9 +89,11 @@ router.post("/create", async (req, res) => {
         /* empty */
     }
 });
-router.get("/:id", async (req, res) => {
+
+router.get("/:id/feed", async (req, res) => {
     try {
-        const userSnapshot = await userCollection.doc(req.params.id).get();
+        const id = req.params.id;
+        const userSnapshot = await userCollection.doc(id).get();
 
         if (!userSnapshot.exists) {
             res.status(400);
@@ -96,11 +101,38 @@ router.get("/:id", async (req, res) => {
             return;
         }
 
-        res.json(userSnapshot.data());
+        let friends: Array<FirebaseFirestore.DocumentData> = [];
+        userSnapshot.get('friends').forEach(friend => {
+           friends.push(friend); 
+        });
+
+        let feed_posts = [];
+        for (const friend of friends) {
+            const friendSnapshot = await userCollection.doc(String(friend)).get();
+
+            if (friendSnapshot.exists) {
+                const posts = friendSnapshot.get('posts');
+                for (const post of posts) {
+                    const postSnapshot = await postCollection.doc(post).get();
+
+                    feed_posts.push(postSnapshot.data() as Post);
+                }
+            }
+        };
+
+        feed_posts.sort(sortFunction);
+
+        res.json({friends: friends, posts: feed_posts});
+        //return;
     } catch {
-        /* empty */
     }
 });
+
+function sortFunction(a,b){  
+    var dateA = Date.parse(a["date-created"]);
+    var dateB = Date.parse(b["date-created"]);
+    return dateA > dateB ? -1 : 1;  
+};
 
 router.post("/:id/request", async (req, res) => {
     const id = req.params.id;
