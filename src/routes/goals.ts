@@ -4,6 +4,7 @@ import { Filter, FieldValue } from "@google-cloud/firestore";
 import { v4 as uuidV4 } from "uuid";
 import { User } from "../types/User.js";
 import { Goal } from "../types/Goal.js";
+import { Post } from "../types/Post.js";
 
 const router = express.Router();
 const userCollection = db.collection("users");
