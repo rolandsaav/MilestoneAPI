@@ -4,6 +4,7 @@ import { Filter, FieldValue } from "@google-cloud/firestore";
 import { v4 as uuidV4 } from "uuid";
 import { User } from "../types/User.js";
 import { Goal } from "../types/Goal.js";
+import { Post } from "../types/Post.js";
 
 const router = express.Router();
 const userCollection = db.collection("users");
@@ -21,6 +22,9 @@ router.get("/", async (req, res) => {
     res.json(goals);
   } catch {}
 });
+
+router.post("/create", async (req, res) => {
+})
 
 router.post("/:goalId/post/:userId", async (req, res) => {
   const goalId = req.params.goalId;
@@ -63,7 +67,7 @@ router.post("/:goalId/post/:userId", async (req, res) => {
 
   const result = await goalDoc.collection("posts").doc(postId).set(newPost);
 
-  res.send(`New post crated at ${result.writeTime.toDate().toDateString()}`);
+  res.send(`New post created at ${result.writeTime.toDate().toDateString()}`);
 });
 
 export default router;
